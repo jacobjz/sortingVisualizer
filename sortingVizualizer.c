@@ -4,67 +4,61 @@
 #include <windows.h>
 #include "GL/glut.h"
 #include <math.h>
-#define MAXWIDTH 1080
-#define MAXHEIGHT 1080
-  
-void * font = GLUT_BITMAP_8_BY_13; //font used	
-int globalArray[MAXWIDTH];
-int n=0;
+#include "algostate.h"
+#define MAXWIDTH 1920
+
+int * array;
+void * font = GLUT_BITMAP_8_BY_13;
+
+AlgorythmState status = def;
 int index = 0;
 int jindex = 0;
 int swappedone = -1;
 int swappedtwo = -1;
-int sortedThreshold = -1;
 int greenCounter = 0;
-bool sorted = true;
-bool sortingAlgorythmEnded = false;
-void bubbleSort(void);
-typedef void (*FunctionPtr)(void);
-FunctionPtr functionPointerArray[] = {bubbleSort};
 
 struct {
 	char* name;
-	bool sorted;
-	bool ended;
-	bool shuffle;
+	AlgorythmState state;
 } AlgroythmMetaData[1];
 
-  void draw() {
-	drawArray();
-	if(sortingAlgorythmEnded) {
+void draw() {  	
+	if(status == shuffled) {
+		shuffleArray();
+	}	
+	if(status == sorting) {
+		functionPointerArray[0]();
+	}
+	if(status == sorted) {
 		drawSortedArray();
-	}  	      
-    if(!sorted) {
-    	functionPointerArray[0]();    	
-    }   
+	}
+	if(status == idle){
+		drawArray();
+		printf("end idle");
+	}			
 }
 
 void drawArray() {
-	int n = sizeof(globalArray) / sizeof(globalArray[0]);
-    int i;
-        for (i = 0; i < n; i++){
-        	glColor3f(1,1,1);  
-			if(i == swappedone || i == swappedtwo) {
-				glColor3f(1,0,0);  
-			}  		             	
-			if(sorted) {
-				glColor3f(1,1,1);  	
-			}
-			glBegin(GL_LINES);
-			glLineWidth(1);
-      		glVertex2i(i, MAXWIDTH);
-  			glVertex2i(i, MAXWIDTH-globalArray[i]);  
-        }		
-        glEnd();
+    int i = 0;
+    glBegin(GL_LINES);
+	glColor3f(1,1,1);
+	glLineWidth(1);	
+	while(i < MAXWIDTH) {
+		glVertex2i(i, MAXWIDTH);
+  		glVertex2i(i, MAXWIDTH-array[i]); 
+  		i++;
+	}
+	
+	glEnd();	              
 }
 
 void drawSortedArray() {
-	int i;
-	if(greenCounter < n) {
+	int i=0;
+	if(greenCounter < MAXWIDTH) {
 		glBegin(GL_LINES);
-		glLineWidth(1);
-		for (i = 0; i < n; i++){
-			glColor3f(1,1,1);  
+		glLineWidth(1);	
+		while(i < MAXWIDTH){
+			glColor3f(1,1,1);
         	if(i <= greenCounter) {
         		glColor3f(0,1,0);  
         	}
@@ -72,58 +66,43 @@ void drawSortedArray() {
         		glColor3f(1,0,0);
         	}
       		glVertex2i(i, MAXWIDTH);
-  			glVertex2i(i, MAXWIDTH-globalArray[i]);    					        
-        }
+  			glVertex2i(i, MAXWIDTH-array[i]);    					        
+			i++;
+		}	 
         glEnd();
-        greenCounter++;
-        glutPostRedisplay(); 
+        greenCounter++;        
 	} else {
-		sortingAlgorythmEnded = false;
-	}	                
+		status = idle;
+	}	               
+	glutPostRedisplay();  
 }
 
 void buttonPressed(unsigned char key, int x, int y) {
   	if(key == 'a') {
-  		sorted = false;
-  		sortingAlgorythmEnded = false;
-  	}  	
+  		index = MAXWIDTH;
+		status = shuffled;
+  	}  	 
   	if(key == 's') {
-  		n = sizeof(globalArray) / sizeof(globalArray[0]);
-  		sorted = false;
-  		sortingAlgorythmEnded = false;
   		index = 0;
-  		jindex = 0;
-  		shuffleArray();
-  	}
+		status = sorting;
+  	}  	 
   	glutPostRedisplay();
   }
   
-  void display() 
-  {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    draw();
-    glutSwapBuffers();
-  }
-
-  void initArray() {
-  	int i;
-  	for (i = 0; i < MAXWIDTH; i++) {
-        globalArray[i] = i;
-    }
-    
-  }
-  
-void shuffleArray() {
+void shuffleArray(void) {
     srand(time(NULL));
-    
-    int i;
-    for (i = n - 1; i > 0; i--) {
-        int j = rand() % (i + 1);
-        
-        int temp = globalArray[i];
-        globalArray[i] = globalArray[j];
-        globalArray[j] = temp;
+    if(index > 0) {
+		int i;
+		for(i = 0; i < 10; i++) {
+			int j = rand() % (index + 1);        
+        	int temp = array[index];
+        	array[index] = array[j];
+        	array[j] = temp;
+		}
+    	index--;    	
     }
+    drawArray();
+    glutPostRedisplay();
 }
 
 void swap(int* xp, int* yp)
@@ -132,54 +111,64 @@ void swap(int* xp, int* yp)
     *xp = *yp;
     *yp = temp;
 }
+
 void bubbleSort(void)
 {
 	bool swapped;
-	if(index <= n-1){
+	if(index <= MAXWIDTH-1){
 		swapped = false;
-        for (jindex = 0; jindex < n - index - 1; jindex++) {
-            if (globalArray[jindex] > globalArray[jindex + 1]) {
-                swap(&globalArray[jindex], &globalArray[jindex + 1]);
+        for (jindex = 0; jindex < MAXWIDTH - index - 1; jindex++) {
+            if (array[jindex] > array[jindex + 1]) {
+                swap(&array[jindex], &array[jindex + 1]);
                 swapped = true;               
 				swappedone = jindex;
                 swappedtwo = jindex + 1;   
             }                                             
         }
+        
+		index++;
 		
 		if (swapped == false){
-			sorted = true;
-			sortingAlgorythmEnded = true;			
-		}            
-		
-		index++;
-		glutPostRedisplay();
+			status = sorted;
+			greenCounter = 0;			
+		}				
+		drawArray();					         	
+		glutPostRedisplay();				
 	}	
 }
 
-void printArray()
-{
-    int i;
-    for (i = 0; i < n; i++)
-        printf("%d ", globalArray[i]);
-	printf("\n");        
-}
-
+  
+  void initArray() {
+  	int i;
+  	for (i = 0; i < MAXWIDTH; i++) {        
+        array[i] = i;
+    }
+    
+  }
+  
   void init() 
   {
-  	initArray();  		
+  	initArray();  
 	glClearColor(0,0,0,0);
-	gluOrtho2D(0, MAXWIDTH,MAXHEIGHT,0);		
+	gluOrtho2D(0, MAXWIDTH,MAXWIDTH,0);		
   }
-
+  
+  void display() 
+  {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    draw();
+    glutSwapBuffers();
+  }
+  
   int main(int argc, char** argv) 
   {
-  	n = sizeof(globalArray) / sizeof(globalArray[0]);  	
+  	array = (int *) malloc(MAXWIDTH*sizeof(int)); 	
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(1024, 512);    
     glutCreateWindow("Sorting Visualizer");
     glutDisplayFunc(display);
-    glutKeyboardFunc(buttonPressed);
+    glutKeyboardFunc(buttonPressed); 
     init();   
-    glutMainLoop();    
+    glutMainLoop();
 }
